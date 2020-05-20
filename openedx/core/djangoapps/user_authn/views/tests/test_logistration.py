@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """ Tests for Logistration views. """
 
-
+from datetime import datetime, timedelta
 from http.cookies import SimpleCookie
 
 import ddt
@@ -17,6 +17,8 @@ from django.test.client import RequestFactory
 from django.test.utils import override_settings
 from django.urls import reverse
 from django.utils.translation import ugettext as _
+from freezegun import freeze_time
+from pytz import UTC
 from six.moves.urllib.parse import urlencode  # pylint: disable=import-error
 
 from course_modes.models import CourseMode
@@ -28,6 +30,7 @@ from openedx.core.djangolib.js_utils import dump_js_escaped_json
 from openedx.core.djangolib.markup import HTML, Text
 from openedx.core.djangolib.testing.utils import skip_unless_lms
 from third_party_auth.tests.testutil import ThirdPartyAuthTestMixin, simulate_running_pipeline
+from util.models import LoginRateLimitConfiguration
 from util.testing import UrlResetMixin
 from xmodule.modulestore.tests.django_utils import ModuleStoreTestCase
 
@@ -70,6 +73,27 @@ class LoginAndRegistrationTest(ThirdPartyAuthTestMixin, UrlResetMixin, ModuleSto
         response = self.client.get(reverse(url_name))
         expected_data = u'"initial_mode": "{mode}"'.format(mode=initial_mode)
         self.assertContains(response, expected_data)
+
+    @ddt.data(30, 50)
+    def test_login_and_registration_form_ratelimited(self, requests):
+        """
+        Test that rate limiting for login enpoint.
+        """
+        LoginRateLimitConfiguration.objects.create(requests=requests)
+        login_url = reverse('signin_user')
+        for i in range(requests):
+            response = self.client.get(login_url)
+            self.assertEqual(response.status_code, 200)
+
+        # then the rate limiter should kick in and give a HttpForbidden response
+        response = self.client.get(login_url)
+        self.assertEqual(response.status_code, 403)
+
+        # now reset the time to 6 mins from now in future in order to unblock
+        reset_time = datetime.now(UTC) + timedelta(seconds=361)
+        with freeze_time(reset_time):
+            response = self.client.get(login_url)
+            self.assertEqual(response.status_code, 200)
 
     @ddt.data("signin_user", "register_user")
     def test_login_and_registration_form_already_authenticated(self, url_name):

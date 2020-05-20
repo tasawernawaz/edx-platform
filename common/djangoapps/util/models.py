@@ -9,6 +9,7 @@ import six
 from config_models.models import ConfigurationModel
 from django.db import models
 from django.utils.text import compress_string
+from django.utils.translation import ugettext_lazy as _
 from opaque_keys.edx.django.models import CreatorMixin
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -26,6 +27,21 @@ class RateLimitConfiguration(ConfigurationModel):
 
     .. no_pii:
     """
+    class Meta(ConfigurationModel.Meta):
+        app_label = "util"
+
+
+class LoginRateLimitConfiguration(ConfigurationModel):
+    """
+    General configuration to make rate limiting configurable for login endpoint.
+
+    .. no_pii:
+    """
+    requests = models.PositiveIntegerField(
+        default=500,
+        help_text=_("The number of requests allowed for every 5 minutes.")
+    )
+
     class Meta(ConfigurationModel.Meta):
         app_label = "util"
 
