@@ -542,7 +542,8 @@ define(['jquery', 'backbone', 'underscore', 'gettext', 'js/views/baseview',
                     // seq_module.py to use 'is_proctored_exam'
                     is_proctored_enabled: isProctoredExamChecked || isPracticeExamChecked || isOnboardingExamChecked,
                     default_time_limit_minutes: this.convertTimeLimitToMinutes(timeLimit),
-                    is_onboarding_exam: isOnboardingExamChecked
+                    is_onboarding_exam: isOnboardingExamChecked,
+                    warning_text: this.getWarningText(),
                 }
             };
         }
